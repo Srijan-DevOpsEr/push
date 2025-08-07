@@ -22,3 +22,4 @@ output "environment" {
 
 output "tags" {
   value = local.tags
+}

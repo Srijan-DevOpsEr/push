@@ -24,7 +24,7 @@ jobs:
           client-payload: |
             {
               "triggered_by": "${{ github.repository }}",
-              "pr_event": "${{ github.event.action }}",
+              "pr_plan": "${{ github.event.action }}",
               "pr_number": "${{ github.event.pull_request.number }}",
               "commit_sha": "${{ github.sha }}",
               "branch": "${{ github.head_ref }}"
@@ -40,7 +40,7 @@ jobs:
           client-payload: |
             {
               "triggered_by": "${{ github.repository }}",
-              "pr_event": "${{ github.event.action }}",
+              "pr_apply": "${{ github.event.action }}",
               "pr_number": "${{ github.event.pull_request.number }}",
               "commit_sha": "${{ github.sha }}",
               "branch": "${{ github.head_ref }}"

@@ -26,7 +26,7 @@ jobs:
               "pr_number": "${{ github.event.pull_request.number }}",
               "commit_sha": "${{ github.sha }}",
               "branch": "${{ github.head_ref }}",
-              "event": "${{ github.event }}",
-              "head": "${{ github }}"
+              # "event": "${{ github.event }}",
+              # "head": "${{ github }}"
             }
         

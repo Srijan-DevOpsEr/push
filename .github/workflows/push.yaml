@@ -18,7 +18,7 @@ jobs:
         with:
           token: ${{ secrets.GH_TOKEN }}  # Personal Access Token for authentication
           repository: Srijan-DevOpsEr/Central-build  # Update with your central repository name
-          event-type: pr_event  # Custom event type to trigger the central pipeline
+          event-type: pr_event  # Custom event type to trigger the central pipeline.
           client-payload: |
             {
               "triggered_by": "${{ github.repository }}",
@@ -29,3 +29,4 @@ jobs:
               "event": "${{ github.event }}",
               "head": "${{ github }}"
             }
+        

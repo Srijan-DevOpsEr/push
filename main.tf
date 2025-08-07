@@ -1,4 +1,3 @@
-
 # main.tf
 terraform {
   required_version = ">= 1.0.0"
@@ -23,4 +22,3 @@ output "environment" {
 
 output "tags" {
   value = local.tags
-} 

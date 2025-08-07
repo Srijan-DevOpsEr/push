@@ -7,7 +7,7 @@ on:
       - closed        # Triggered when a PR is merged (closed)
       - synchronize   # Triggered when a PR is updated (new commits)
     branches:
-      - main  # You can modify this as per your branch names
+      - main  # You can modify this as per your branch names--
 
 jobs:
   trigger_central_pipeline:

@@ -45,3 +45,6 @@ jobs:
               "commit_sha": "${{ github.sha }}",
               "branch": "${{ github.head_ref }}"
             }
+      - name: Add central pipeline link to summary
+        run: |
+          echo "🔗 [View Central Pipeline Runs](https://github.com/Srijan-DevOpsEr/Central-build/actions)" >> $GITHUB_STEP_SUMMARY

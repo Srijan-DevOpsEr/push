@@ -16,21 +16,20 @@ jobs:
       - name: Trigger Central Pipeline
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.GH_TOKEN }}  # Personal Access Token for authentication
-          repository: Srijan-DevOpsEr/Central-build  # Update with your central repository name
-          event-type: pr_event  # Custom event type to trigger the central pipeline.
+          token: ${{ secrets.GH_TOKEN }}
+          repository: Srijan-DevOpsEr/Central-build
+          event-type: pr_event
           client-payload: |
             {
               "triggered_by": "${{ github.repository }}",
               "pr_event": "${{ github.event.action }}",
               "pr_number": "${{ github.event.pull_request.number }}",
               "commit_sha": "${{ github.sha }}",
-              "branch": "${{ github.head_ref }}",
-              "event": "${{ github.event }}",
-              "head": "${{ github }}"
+              "branch": "${{ github.head_ref }}"
             }
-            - name: Add central pipeline link to summary
-              run: |
-              echo "🔗 [View Central Pipeline Runs](https://github.com/Srijan-DevOpsEr/Central-build/actions)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Add central pipeline link to summary
+        run: |
+          echo "🔗 [View Central Pipeline Runs](https://github.com/Srijan-DevOpsEr/Central-build/actions)" >> $GITHUB_STEP_SUMMARY
 
         

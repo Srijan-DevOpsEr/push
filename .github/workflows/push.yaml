@@ -29,4 +29,8 @@ jobs:
               "event": "${{ github.event }}",
               "head": "${{ github }}"
             }
+            - name: Add central pipeline link to summary
+              run: |
+              echo "🔗 [View Central Pipeline Runs](https://github.com/Srijan-DevOpsEr/Central-build/actions)" >> $GITHUB_STEP_SUMMARY
+
         

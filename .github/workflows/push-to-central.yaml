@@ -1,0 +1,47 @@
+name: Child pipeline to Trigger Central Pipeline on PR Events
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - closed
+    branches:
+      - main
+
+jobs:
+  trigger_central_pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger PR Plan Pipeline
+        if: github.event.action == 'opened' || github.event.action == 'synchronize'
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          repository: Srijan-DevOpsEr/Central-build
+          event-type: pr_plan
+          client-payload: |
+            {
+              "triggered_by": "${{ github.repository }}",
+              "pr_event": "${{ github.event.action }}",
+              "pr_number": "${{ github.event.pull_request.number }}",
+              "commit_sha": "${{ github.sha }}",
+              "branch": "${{ github.head_ref }}"
+            }
+
+      - name: Trigger PR Apply Pipeline
+        if: github.event.action == 'closed' && github.event.pull_request.merged == true
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          repository: Srijan-DevOpsEr/Central-build
+          event-type: pr_apply
+          client-payload: |
+            {
+              "triggered_by": "${{ github.repository }}",
+              "pr_event": "${{ github.event.action }}",
+              "pr_number": "${{ github.event.pull_request.number }}",
+              "commit_sha": "${{ github.sha }}",
+              "branch": "${{ github.head_ref }}"
+            }

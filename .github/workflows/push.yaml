@@ -22,7 +22,7 @@ jobs:
           client-payload: |
             {
               "triggered_by": "${{ github.repository }}",
-              "pr_event": "${{ github.event.action }}",  # Can be 'opened', 'synchronize', or 'closed'
+              "pr_event": "${{ github.event.action }}",
               "pr_number": "${{ github.event.pull_request.number }}",
               "commit_sha": "${{ github.sha }}",
               "branch": "${{ github.head_ref }}"

@@ -1,0 +1,18 @@
+name: Trigger Central Build Workflow
+
+on:
+  push:
+    branches:
+      - main  # Triggered when there is a push to the main branch
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Triggering the central build pipeline
+        uses: peter-evans/repository-dispatch@v3
+        with:
+            token: ${{ secrets.CENTRAL_BUILD_PIPELINE_PAT }}  # Personal Access Token for the central repository
+            repository: chain-builds/central-repo  # The name of the central repository
+            event-type: dependency_updated  # Custom event type
+            client-payload: '{"triggered_by": "${{ github.repository }}", "commit_sha": "${{ github.sha }}", "branch": "${{ github.ref }}"}'

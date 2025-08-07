@@ -1,0 +1,395 @@
+name: Central Terraform IaC Pipline - PR Create
+
+permissions:
+  contents: write
+  id-token: write  # only if you're using OIDC
+  pull-requests: read  # only if needed for PR jobs
+
+on:
+  repository_dispatch:
+    types: [pr_event]
+  workflow_dispatch:
+
+jobs:
+  who-triggered-me:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Who triggered me?
+        run: |
+          echo "### This pipeline trigger summary " >> $GITHUB_STEP_SUMMARY
+          echo "I was triggered by ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+ 
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            echo "Triggered by: ${{ github.event.client_payload.triggered_by }}" >> $GITHUB_STEP_SUMMARY
+            echo 'Repository Dispatch payload:' >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+ 
+            jq -n \
+              --arg branch "${{ github.event.client_payload.branch }}" \
+              --arg commit_sha "${{ github.event.client_payload.commit_sha }}" \
+              --arg pr_event "${{ github.event.client_payload.pr_event }}" \
+              --arg pr_number "${{ github.event.client_payload.pr_number }}" \
+              --arg triggered_by "${{ github.event.client_payload.triggered_by }}" \
+              '{
+                branch: $branch,
+                commit_sha: $commit_sha,
+                pr_event: $pr_event,
+                pr_number: $pr_number,
+                triggered_by: $triggered_by
+              }' >> $GITHUB_STEP_SUMMARY
+ 
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual trigger" >> $GITHUB_STEP_SUMMARY
+          fi
+  terraform-format:
+    name: Terraform Format
+    runs-on: ubuntu-latest
+    # environment: production
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: "${{ github.event.client_payload.repo_name}}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        run: terraform init 
+        
+      - name: Terraform Format
+        run: terraform fmt -check -recursive
+
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    # environment: production
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: "${{ github.event.client_payload.repo_name}}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        run: terraform init 
+        
+      - name: Terraform Validate
+        run: terraform validate
+
+  terraform-docs:
+    name: Terraform documentation generation
+    runs-on: ubuntu-latest
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      AAD_CLIENT_SECRET: ${{ secrets.AAD_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v3.6.0
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Render terraform docs inside the README.md and push changes back to PR branch
+        uses: terraform-docs/gh-actions@v1.0.0
+        with:
+          find-dir: .
+          output-file: README.md
+          output-method: inject
+          git-push: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  terraform-tfsec:
+    name: Terraform TfSec Scanning
+    runs-on: ubuntu-latest
+    # environment: production
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      AAD_CLIENT_SECRET: ${{ secrets.AAD_CLIENT_SECRET }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: "${{ github.event.client_payload.repo_name}}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        run: terraform init 
+        
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.0
+
+  terraform-checkov:
+    name: Terraform Checkov Scanning
+    runs-on: ubuntu-latest
+    # environment: production
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      AAD_CLIENT_SECRET: ${{ secrets.AAD_CLIENT_SECRET }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: "${{ github.event.client_payload.repo_name}}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        run: terraform init 
+        
+      # - name: Run Checkov
+      #   uses: bridgecrewio/checkov-action@v12
+      #   with:
+      #     directory: .
+      #     framework: terraform
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      AAD_CLIENT_SECRET: ${{ secrets.AAD_CLIENT_SECRET }}
+    needs: [
+      terraform-format,
+      terraform-validate,
+      terraform-tfsec,
+      terraform-checkov,
+      terraform-docs,
+    ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          repository: "${{ github.event.client_payload.repo_name}}"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        run: terraform init      
+              
+      - name: Terraform Plan                
+        run: terraform plan -out=pr-plan.out -var "cfg_aad_client_secret=${{ secrets.AAD_CLIENT_SECRET }}"
+
+      - name: Upload plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: pr-plan.out
+
+  checkov:
+    name: checkov Plan
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      AAD_CLIENT_SECRET: ${{ secrets.AAD_CLIENT_SECRET }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: "${{ github.event.client_payload.repo_name}}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        run: terraform init 
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: .
+
+      - name: Convert to JSON
+        run: terraform show -json pr-plan.out > tfplan.json
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          file: tfplan.json
+          # Skipping CKV_AZURE_178 as it is giving false positive
+          # Skipping CKV_AZURE_216 as it is giving false positive. It is denying even though we have set firewall_policy_threat_intelligence_mode = "Deny" for all firewall policies
+          # Skipping CKV_AZURE_220 as IDS/IPS has not been turned on at enterprise level. It needs review, discussion and agreement before it can be turned on
+          skip_check: CKV_AZURE_178,CKV_AZURE_216,CKV_AZURE_220
+
+  compliance:
+    name: Terraform Compliance
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      AAD_CLIENT_SECRET: ${{ secrets.AAD_CLIENT_SECRET }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: "${{ github.event.client_payload.repo_name}}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        run: terraform init 
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: .
+
+      - name: Convert to JSON
+        run: terraform show -json pr-plan.out > tfplan.json
+
+      - name: Install terraform-compliance
+        run: |
+          pip install terraform-compliance
+
+      # - name: Run terraform-compliance
+      #   run: terraform-compliance -p tfplan.json -f features/
+
+  terratest:
+    name: Terratest
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      AAD_CLIENT_SECRET: ${{ secrets.AAD_CLIENT_SECRET }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: "${{ github.event.client_payload.repo_name}}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        run: terraform init 
+      
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          enable-AzPSSession: true
+
+      # - name: Run Terratest
+      #   run: |
+      #     cd terratest
+      #     go mod tidy
+      #     go test -v -tags="azure azureslim network" -timeout 30m
+      #   env:
+      #     ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+  # compliance:
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+
+  #     - name: Install dependencies
+  #       run: |
+  #         sudo apt-get install jq curl
+
+  #     - name: Fetch plan JSON from TFC
+  #       env:
+  #         TFC_TOKEN: ${{ secrets.TF_API_TOKEN }}
+  #         TFC_ORG: SivajiRaavi
+  #         TFC_WORKSPACE: azure-recovery-services-vault-dev
+  #       run: |
+  #         # Get workspace ID
+  #         WORKSPACE_ID=$(curl -s \
+  #           --header "Authorization: Bearer $TFC_TOKEN" \
+  #           https://app.terraform.io/api/v2/organizations/$TFC_ORG/workspaces/$TFC_WORKSPACE \
+  #           | jq -r '.data.id')
+
+  #         # Get latest run ID
+  #         RUN_ID=$(curl -s \
+  #           --header "Authorization: Bearer $TFC_TOKEN" \
+  #           https://app.terraform.io/api/v2/workspaces/$WORKSPACE_ID/runs \
+  #           | jq -r '.data[0].id')
+
+  #         # Get plan ID
+  #         PLAN_ID=$(curl -s \
+  #           --header "Authorization: Bearer $TFC_TOKEN" \
+  #           https://app.terraform.io/api/v2/runs/$RUN_ID \
+  #           | jq -r '.data.relationships.plan.data.id')
+
+  #         # Get the JSON plan download URL
+  #         PLAN_JSON_URL=$(curl -s \
+  #           --header "Authorization: Bearer $TFC_TOKEN" \
+  #           https://app.terraform.io/api/v2/plans/$PLAN_ID/json-output \
+  #           | jq -r '.data.attributes."hosted-json-url"')
+
+  #         # Download JSON plan
+  #         curl -s -H "Authorization: Bearer $TFC_TOKEN" "$PLAN_JSON_URL" -o tfplan.json
+
+  #     - name: Run terraform-compliance
+  #       run: |
+  #         docker run --rm \
+  #           -v ${{ github.workspace }}:/target \
+  #           eerkunt/terraform-compliance \
+  #           -p /target/tfplan.json \
+  #           -f /target/features

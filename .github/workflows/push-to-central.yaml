@@ -24,7 +24,7 @@ jobs:
           client-payload: |
             {
               "triggered_by": "${{ github.repository }}",
-              "pr_event": "${{ github.event.action }}",
+              "pr_plan": "${{ github.event.action }}",
               "pr_number": "${{ github.event.pull_request.number }}",
               "commit_sha": "${{ github.sha }}",
               "branch": "${{ github.head_ref }}"
@@ -40,8 +40,11 @@ jobs:
           client-payload: |
             {
               "triggered_by": "${{ github.repository }}",
-              "pr_event": "${{ github.event.action }}",
+              "pr_apply": "${{ github.event.action }}",
               "pr_number": "${{ github.event.pull_request.number }}",
               "commit_sha": "${{ github.sha }}",
               "branch": "${{ github.head_ref }}"
             }
+      - name: Add central pipeline link to summary
+        run: |
+          echo "🔗 [View Central Pipeline Runs](https://github.com/Srijan-DevOpsEr/Central-build/actions)" >> $GITHUB_STEP_SUMMARY

@@ -1,4 +1,4 @@
-name: Child pipeline to Trigger Central Pipeline on PR Events
+name: Child pipeline to Trigger Central Pipeline on PR Events 
 
 on:
   pull_request:
